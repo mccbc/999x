@@ -1,10 +1,15 @@
 import sys, os
 sys.path.append('/home/bcm2vn/research/wind/vis/python/')
 cwd = os.getcwd()
+print(cwd)
 from plot_1d import *
 import athena_read
 from glob import glob
 sys.path.append(cwd)
+
+if not os.path.exists(cwd+'/plots/'):
+    os.makedirs(cwd+'/plots/')
+
 import argparse
 import pdb
 
@@ -21,7 +26,6 @@ kappaes = 0.2 * Rns * rho_0
 Prat = 2.8112786
 
 GM = G*M*msun/Rns/Rgas/temp
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument('step', type=int, nargs='*', help='Step or steps at which to plot the variables')
@@ -78,6 +82,6 @@ for step in steps:
 
 
     if args.output == True:
-        plt.savefig('diagnostic_step{:05d}.png'.format(step))
+        plt.savefig('./plots/diagnostic_step{:05d}.png'.format(step))
     else:
         plt.show()
