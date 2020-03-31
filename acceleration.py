@@ -41,14 +41,15 @@ for step in steps:
     x1v = data[0, 0, :, 0]
     Fcom = data[0, 0, :, 11]
 
-    fig, (ax1, ax2, ax3) = plt.subplots(nrows=3, ncols=1, sharex=True, figsize=(17, 11))
+    fig, (ax0, ax1, ax2, ax3) = plt.subplots(nrows=4, ncols=1, sharex=True, figsize=(16, 12))
     plt.tight_layout()
     fig.subplots_adjust(hspace=0, top=0.95, bottom=0.05)
 
+    ax0.plot(x1v, data[0, 0, :, 1], 'k-', label="Density")
 
     ax1.plot(x1v, Prat*kappaes*Fcom - GM/x1v**2, 'c-', label="Rad - Grav accel")
     ax1.plot(x1v, np.abs(Prat*kappaes*Fcom - GM/x1v**2), 'c--')
-    ax1.set_ylim((1e-3, 1e2))
+    #ax1.set_ylim((1e-3, 1e2))
 
     #ax1.plot(x1v, np.zeros(len(x1v)), 'k--')
 
@@ -58,15 +59,16 @@ for step in steps:
     ax2.plot(x1v, data[0, 0, :, 8], label="Eulerian Frame Flux")
     ax2.plot(x1v, data[0, 0, :, 6], label="Energy Density")
     ax2.plot(x1v, data[0, 0, :, 11], label="Comoving Frame Flux")
-    ax2.set_ylim((1e-5, 1.5))
+    ax2.set_ylim(bottom=1e-5)
 
     ax3.plot(x1v, data[0, 0, :, 8] - data[0, 0, :, 11], 'r-', label="Advective Flux")
     ax3.plot(x1v, np.abs(data[0, 0, :, 8] - data[0, 0, :, 11]), 'r--')
-    ax3.set_ylim((1e-20, 10))
+    ax3.set_ylim(bottom=1e-20)
 
-    for ax in (ax1, ax2, ax3):
+    for ax in (ax0, ax1, ax2, ax3):
         ax.set_xscale('log')
         ax.set_yscale('log')
+        ax.set_xlim(left=0.99)
         ax.legend()
 
     plt.xlabel('x1v')
