@@ -29,15 +29,21 @@ GM = G*M*msun/Rns/Rgas/temp
 
 parser = argparse.ArgumentParser()
 parser.add_argument('step', type=int, nargs='*', help='Step or steps at which to plot the variables')
+parser.add_argument('-s', '--start', type=int, help='Step at which to start, if not specifying individual steps')
+parser.add_argument('-g', '--gap', type=int, help='Spacing between adjacent output plots, in steps')
 parser.add_argument('-o', '--output', action='store_true')
 args = parser.parse_args()
 
 athfiles = glob('eddingtonwind.block0.out2.*')
 steps = args.step
 
+if steps == []:
+    end = int(athfiles[-1].split('.tab')[0].split('out2.')[-1])
+    steps = list(np.arange(args.start, end, args.gap))
+
 for step in steps:
     data = athena_read.tab(athfiles[step])
-    print(athfiles[step])
+    #print(athfiles[step])
     x1v = data[0, 0, :, 0]
     Fcom = data[0, 0, :, 11]
 
@@ -49,7 +55,7 @@ for step in steps:
 
     ax1.plot(x1v, Prat*kappaes*Fcom - GM/x1v**2, 'c-', label="Rad - Grav accel")
     ax1.plot(x1v, np.abs(Prat*kappaes*Fcom - GM/x1v**2), 'c--')
-    #ax1.set_ylim((1e-3, 1e2))
+    ax1.set_ylim(bottom=1e-3)
 
     #ax1.plot(x1v, np.zeros(len(x1v)), 'k--')
 
