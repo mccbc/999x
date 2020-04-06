@@ -7,8 +7,8 @@ import athena_read
 from glob import glob
 sys.path.append(cwd)
 
-if not os.path.exists(cwd+'/plots/'):
-    os.makedirs(cwd+'/plots/')
+if not os.path.exists(cwd+'/plots1/'):
+    os.makedirs(cwd+'/plots1/')
 
 import argparse
 import pdb
@@ -53,9 +53,14 @@ for step in steps:
 
     ax0.plot(x1v, data[0, 0, :, 1], 'k-', label="Density")
 
-    ax1.plot(x1v, Prat*kappaes*Fcom - GM/x1v**2, 'c-', label="Rad - Grav accel")
-    ax1.plot(x1v, np.abs(Prat*kappaes*Fcom - GM/x1v**2), 'c--')
-    ax1.set_ylim(bottom=1e-3)
+    ax1.plot(x1v, Prat*kappaes*Fcom/(GM/x1v**2), 'c-', label="Comoving Flux / Gravity")
+    #ax1.plot(x1v, np.abs(Prat*kappaes*Fcom - GM/x1v**2), 'c--')
+
+    ax1.plot(x1v, data[0, 0, :, 11]/(data[0, 0, 0, 11]/x1v**2), 'g-', label="Comoving Flux / (Fcom_0 / r^2)")
+    ax1.set_xlim(left=0.99)
+    ax1.set_ylim(bottom=0.5, top=2)
+    ax1.set_xscale('log')
+    ax1.legend()
 
     #ax1.plot(x1v, np.zeros(len(x1v)), 'k--')
 
@@ -69,9 +74,9 @@ for step in steps:
 
     ax3.plot(x1v, data[0, 0, :, 8] - data[0, 0, :, 11], 'r-', label="Advective Flux")
     ax3.plot(x1v, np.abs(data[0, 0, :, 8] - data[0, 0, :, 11]), 'r--')
-    ax3.set_ylim(bottom=1e-20)
+    ax3.set_ylim(bottom=1e-2)
 
-    for ax in (ax0, ax1, ax2, ax3):
+    for ax in (ax0, ax2, ax3):
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.set_xlim(left=0.99)
@@ -90,6 +95,6 @@ for step in steps:
 
 
     if args.output == True:
-        plt.savefig('./plots/diagnostic_step{:05d}.png'.format(step))
+        plt.savefig('./plots1/diagnostic_step{:05d}.png'.format(step))
     else:
         plt.show()
