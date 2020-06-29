@@ -1,2 +1,6 @@
 **/*.mod
 **/*.out
+**/*.pdf
+**/*.png
+**/*.dat
+**/__pycache__
