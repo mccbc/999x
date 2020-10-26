@@ -13,19 +13,19 @@ import math as m
 c = 29979245800.0
 
 # Parallel processing setup
-pool = Pool(processes=8)
+pool = Pool(processes=1)
 
 # Physical parameters
 lya = Line(1215.6701, 0.4164, 6.265e8)
 p = Params(line=lya, temp=1e4, tau0=1e7, num_dens=1701290465.5139434, 
-           energy=1., R=1e11, sigma_source=0., n_points=1e5)
+           energy=1., R=1e11, sigma_source=0., n_points=1e4)
 
 # Diffusion time
 tdiff = p.R / c * (p.a * p.tau0)**(1./3) # Diffusion time
 dt = 0.1*tdiff/4.#TODO: Do a run with dt = 0.1*tdiff/4
 
 # Number of omega points in grid
-N_omegas = 512 # TODO: Do a run with 512 omegas, with dt = 0.1*tdiff/4. Reduce sigma max if needed
+N_omegas = 128 # TODO: Do a run with 512 omegas, with dt = 0.1*tdiff/4. Reduce sigma max if needed
 N_ns = 8
 
 # Create grids
@@ -36,7 +36,7 @@ n_grid = np.arange(1, N_ns+1, 1)
 sigma_grid = p.sigma_grid
 
 # Create output hdf5 file
-fname = '/LyraShared/bcm2vn/outputs/lya_analytic/n{}_sigma{}_omega{}_highfreq_lorprofile.hdf5'.format(N_ns, len(sigma_grid), N_omegas)
+fname = '/LyraShared/bcm2vn/outputs/lya_analytic/n{}_sigma{}_omega{}_rk.hdf5'.format(N_ns, len(sigma_grid), N_omegas)
 #fname = './outputs/n{}_widesigma{}_logomega{}.hdf5'.format(N_ns, len(sigma_grid), N_omegas)
 
 pb = tqdm(total=len(omega_grid)*len(n_grid))
@@ -50,8 +50,8 @@ def save_queue(result):
 # Calculate J_n_sigma_omega for all grid points
 for i in range(len(omega_grid)):
     for j in range(len(n_grid)):
-#        process(n_grid, omega_grid, sigma_grid, i, j, p, fname)
-        result = pool.apply_async(process, args=(n_grid, omega_grid, sigma_grid, i, j, p, fname), callback=save_queue)
+        process(n_grid, omega_grid, sigma_grid, i, j, p, fname)
+#        result = pool.apply_async(process, args=(n_grid, omega_grid, sigma_grid, i, j, p, fname), callback=save_queue)
 pool.close()
 pool.join()
 pb.close()

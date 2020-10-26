@@ -5,8 +5,10 @@ from scipy.linalg import solve
 
 try:
     from util import voigtx_fast, Line, Params
+    from rk import rk
 except:
     from solutions.util import voigtx_fast, Line, Params
+    from solutions.rk import rk
 
 import time
 import pdb
@@ -26,13 +28,13 @@ class BoundaryValue(object):
         self.kappa_n = self.n * np.pi / self.p.R
         if self.verbose:
             print('\nn = {}    omega = {}    sigma_s = {}'.format(self.n, self.omega, self.p.sigma_source))
-            print('process        part      domain      rtol, atol        time')
+            print('process        part      domain      dxmax, dxmin      time')
             print('-----------------------------------------------------------')
 
     def integrate_J(self, bounds, ivs):
 
         start = time.time()
-        atol, rtol = (3e-10, 3e-10)
+        dxmax, dxmin = (1e-2, 1e-6)
         sigma_eval = self.p.sigma_grid[(self.p.sigma_grid <= np.max(bounds)) & (self.p.sigma_grid >= np.min(bounds))]
 
         # Check to see if omega term dominates; it shouldn't out on the wing, because then there would be oscillations
@@ -46,17 +48,39 @@ class BoundaryValue(object):
         if bounds[0] > bounds[1]:
             sigma_eval = np.flip(sigma_eval)
 
-        sol = solve_ivp(_mean_intensity, bounds, ivs, atol=atol, rtol=rtol, args=(self, ), t_eval=sigma_eval)
+        sol = rk(_mean_intensity, bounds, ivs, args=self, t_eval=sigma_eval, dx_max=dxmax, dx_min=dxmin, verbose=True)
 
-        #while len(sol.t) == 1:
-        #    atol = atol * 10.
-        #    rtol = rtol * 10.
-        #    sol = solve_ivp(_mean_intensity, bounds, ivs, atol=atol, rtol=rtol,
-        #                    args=(self, ), t_eval=sigma_eval)
+        #sol_noeval = rk(_mean_intensity, bounds, ivs, args=self, dx_max=1e-1, dx_min=1e-4, verbose=True)
+#        sol = solve_ivp(_mean_intensity, bounds, ivs, args=(self, ), t_eval=sigma_eval, rtol=rtol, atol=atol)
+
+        #### BEGIN DEBUG CONVERGENCE TEST #####
+#        sol1 = rk(_mean_intensity, bounds, ivs, args=self, t_eval=sigma_eval, dx_max=1e-2, dx_min=1e-5, verbose=True)
+#
+ #       start = time.time()
+ #       sci = solve_ivp(_mean_intensity, bounds, ivs, t_eval=sigma_eval, args=(self, ), rtol=rtol, atol=atol)
+ #       end = time.time()
+ #       print('Scipy done in {:.2f} s'.format(end-start))#
+
+        # Longer solution should be "correct"
+        #long_sol = rk(_mean_intensity, bounds, ivs, args=self, t_eval=sigma_eval, dx_max=1e-4, dx_min=1e-10, verbose=True)
+
+        #import matplotlib.pyplot as plt
+        #def plotdiff(sol, label):
+        #    t = np.array(sol.t, dtype=float)
+        #    plt.scatter(sol.t[:-1], np.abs(sol.x[2][:-1]-long_sol.x[2][:-1])/long_sol.x[2][:-1], label=label, alpha=0.5, s=2)
+        #pdb.set_trace()
+        #plotdiff(sol, 'rk (1e-1, 1e-4)')
+        #plotdiff(sol1, 'rk (1e-2, 1e-5)')
+        #plt.scatter(sci.t, np.abs(sci.y[2]-long_sol.x[2])/long_sol.x[2], label='scipy', alpha=0.5, s=2)
+#        plt.yscale('log')
+        #plt.title('Fractional Difference with rk (1e-4, 1e-10)')
+        #plt.legend()
+        #pdb.set_trace()
+        #### END DEBUG CONVERGENCE TEST #####
 
         end = time.time()
         if self.verbose:
-            print('    [{}, {}]'.format(rtol, atol), end='', flush=True)
+            print('    [{}, {}]'.format(dxmax, dxmin), end='', flush=True)
             print('{:9.3f} s'.format(end - start))
 
         return sol
@@ -73,10 +97,10 @@ class BoundaryValue(object):
         solution = self.integrate_J(bounds, ivs)
         at_source = (solution.t == self.p.sigma_source)
 
-        self.a = solution.y[2][at_source]  # J_real
-        self.c = solution.y[3][at_source]  # J_imag
-        self.e = solution.y[0][at_source]  # d(J_real)/d(sigma)
-        self.g = solution.y[1][at_source]  # d(J_imag)/d(sigma)
+        self.a = solution.x[2][at_source]  # J_real
+        self.c = solution.x[3][at_source]  # J_imag
+        self.e = solution.x[0][at_source]  # d(J_real)/d(sigma)
+        self.g = solution.x[1][at_source]  # d(J_imag)/d(sigma)
 
         return solution
 
@@ -92,10 +116,10 @@ class BoundaryValue(object):
         solution = self.integrate_J(bounds, ivs)
         at_source = (solution.t == self.p.sigma_source)
 
-        self.A = solution.y[2][at_source]  # J_real
-        self.C = solution.y[3][at_source]  # J_imag
-        self.E = solution.y[0][at_source]  # d(J_real)/d(sigma)
-        self.G = solution.y[1][at_source]  # d(J_imag)/d(sigma)
+        self.A = solution.x[2][at_source]  # J_real
+        self.C = solution.x[3][at_source]  # J_imag
+        self.E = solution.x[0][at_source]  # d(J_real)/d(sigma)
+        self.G = solution.x[1][at_source]  # d(J_imag)/d(sigma)
 
         return solution
 
@@ -111,10 +135,10 @@ class BoundaryValue(object):
         solution = self.integrate_J(bounds, ivs)
         at_source = (solution.t == self.p.sigma_source)
 
-        self.b = solution.y[2][at_source]  # J_real
-        self.d = solution.y[3][at_source]  # J_imag
-        self.f = solution.y[0][at_source]  # d(J_real)/d(sigma)
-        self.h = solution.y[1][at_source]  # d(J_imag)/d(sigma)
+        self.b = solution.x[2][at_source]  # J_real
+        self.d = solution.x[3][at_source]  # J_imag
+        self.f = solution.x[0][at_source]  # d(J_real)/d(sigma)
+        self.h = solution.x[1][at_source]  # d(J_imag)/d(sigma)
 
         return solution
 
@@ -130,20 +154,21 @@ class BoundaryValue(object):
         solution = self.integrate_J(bounds, ivs)
         at_source = (solution.t == self.p.sigma_source)
 
-        self.B = solution.y[2][at_source]  # J_real
-        self.D = solution.y[3][at_source]  # J_imag
-        self.F = solution.y[0][at_source]  # d(J_real)/d(sigma)
-        self.H = solution.y[1][at_source]  # d(J_imag)/d(sigma)
+        self.B = solution.x[2][at_source]  # J_real
+        self.D = solution.x[3][at_source]  # J_imag
+        self.F = solution.x[0][at_source]  # d(J_real)/d(sigma)
+        self.H = solution.x[1][at_source]  # d(J_imag)/d(sigma)
 
         return solution
 
     def solve_coeff_matrix(self):
 
         start = time.time()
+        #TODO: How do we make this take mpf floats? Doesn't seem possible.
         matrix = np.array([[self.a, self.b, -self.A, -self.B],
                            [self.c, self.d, -self.C, -self.D],
                            [-self.e, -self.f, self.E, self.F],
-                           [self.g, self.h, -self.G, -self.H]])
+                           [self.g, self.h, -self.G, -self.H]], dtype=float)
 
         solution_vector = np.array([0.,
                                     0.,
@@ -171,10 +196,10 @@ class BoundaryValue(object):
         
         # Centerpoint is duplicated --- remove it from one of the arrays with [:-1] before combining 
         sigma = np.concatenate((left_real.t[:-1], right_real.t))
-        J_real = np.concatenate((J_1_real * left_real.y[2][:-1], J_2_real * right_real.y[2]))
-        J_imag = np.concatenate((J_1_imag * left_imag.y[3][:-1], J_2_imag * right_imag.y[3]))
-        J_prime_real = np.concatenate((J_1_real * left_real.y[0][:-1], J_2_real * right_real.y[0]))
-        J_prime_imag = np.concatenate((J_1_imag * left_imag.y[1][:-1], J_2_imag * right_imag.y[1]))
+        J_real = np.concatenate((J_1_real * left_real.x[2][:-1], J_2_real * right_real.x[2]))
+        J_imag = np.concatenate((J_1_imag * left_imag.x[3][:-1], J_2_imag * right_imag.x[3]))
+        J_prime_real = np.concatenate((J_1_real * left_real.x[0][:-1], J_2_real * right_real.x[0]))
+        J_prime_imag = np.concatenate((J_1_imag * left_imag.x[1][:-1], J_2_imag * right_imag.x[1]))
 
         sort = sigma.argsort()
         sigma = sigma[sort]
@@ -187,38 +212,20 @@ class BoundaryValue(object):
 
 
 def _mean_intensity(sigma, dependent, *args):
-    global Jrealarray, sigmaarray
 
-#    rescale = 1e-300
     (x2, y2, x1, y1) = dependent
     (obj, ) = args
-
-#    x1 = rescale * x1
-#    y1 = rescale * y1
-
-## DEBUG
-#    print('sigma={:.2E}  x1={:.2E}  y1={:.2E}, phi={:.2E}'.format(sigma, x1, y1, obj.p.phi(sigma)))
-
-#    try:
-#        Jrealarray.append(x1)
-#        sigmaarray.append(sigma)
-#    except:
-#        Jrealarray = [x1]
-#        sigmaarray = [sigma]
-
-#    if (sigma > -1):
-#        pdb.set_trace()
 
     # x2 = d(J_real)/d(sigma)
     # y2 = d(J_imag)/d(sigma)
     # x1 = J_real
-    # y1 = J_imag
+    # y1 = J_imag    
 
-    return [(obj.p.delta * obj.kappa_n / obj.p.k)**2. * x1 + 3. * obj.omega * obj.p.delta**2. * obj.p.phi(sigma) / obj.p.k / c * y1,  # dx2_dsigma
-            (obj.p.delta * obj.kappa_n / obj.p.k)**2. * y1 - 3. * obj.omega * obj.p.delta**2. * obj.p.phi(sigma) / obj.p.k / c * x1,  # dy2_dsigma
+    return np.array([(obj.p.delta * obj.kappa_n / obj.p.k)**2. * x1 + 3. * obj.omega * obj.p.delta**2. * obj.p.phi(float(sigma)) / obj.p.k / c * y1,  # dx2_dsigma
+            (obj.p.delta * obj.kappa_n / obj.p.k)**2. * y1 - 3. * obj.omega * obj.p.delta**2. * obj.p.phi(float(sigma)) / obj.p.k / c * x1,  # dy2_dsigma
             x2,  # dx1_dsigma = x2
             y2  # dy1_dsigma = y2
-           ]
+           ])
 
 if __name__ == '__main__':
 
